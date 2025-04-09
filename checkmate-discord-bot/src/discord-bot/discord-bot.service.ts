@@ -12,6 +12,7 @@ import {
   Message,
   ColorResolvable,
   MessageFlags,
+  ButtonComponent,
 } from 'discord.js';
 import * as dotenv from 'dotenv';
 import { User } from 'src/database/schemas/user.schema';
@@ -101,16 +102,16 @@ export class DiscordBotService {
     if (message.author.id === process.env.DISCORD_BOT_ID) return;
 
     const regex = /\b[1-9A-HJ-NP-Za-km-z]{43,44}\b/;
-    console.log('message content:', message.content);
+    // console.log('message content:', message.content);
     const match = message.content.match(regex);
     if (!match) return;
 
-    console.log('Found address:', match[0]);
+    // console.log('Found address:', match[0]);
     try {
       const data = await this.rugCheckService.getTokenReport$Vote(match[0]);
 
-      console.log(data.tokenDetail);
-      console.log(data.tokenVotes);
+      // console.log(data.tokenDetail);
+      // console.log(data.tokenVotes);
 
       const channel = this.client.channels.cache.get(message.channelId);
       if (!channel?.isTextBased()) return;
@@ -439,49 +440,129 @@ export class DiscordBotService {
 
     switch (interaction.customId) {
       case 'upvote':
-        const userExist = await this.findOrCreateUserWallet(user.id, 'discord');
-        console.log(userExist);
-        if (userExist) {
-          const encryptedSVMWallet = await this.walletService.decryptSVMWallet(
-            `${process.env.DEFAULT_WALLET_PIN}`,
-            userExist.svmWalletDetails,
-          );
-          console.log(encryptedSVMWallet.privateKey);
-          const payload = await this.rugCheckService.signLoginPayload(
-            encryptedSVMWallet.privateKey,
+        try {
+          const embed = interaction.message.embeds[0];
+          // Defer the interaction to allow more time for the API call
+          await interaction.deferUpdate();
+
+          const userExist = await this.findOrCreateUserWallet(
+            user.id,
+            'discord',
           );
 
-          console.log(payload);
+          if (userExist) {
+            const encryptedSVMWallet =
+              await this.walletService.decryptSVMWallet(
+                `${process.env.DEFAULT_WALLET_PIN}`,
+                userExist.svmWalletDetails,
+              );
+            const { token } = await this.rugCheckService.signLoginPayload(
+              encryptedSVMWallet.privateKey,
+            );
+            const address = this.extractAddress(embed);
+
+            if (token && address) {
+              const vote = await this.rugCheckService.voteOnToken(
+                token,
+                address,
+                true,
+              );
+              if (!vote) {
+                await interaction.followUp({
+                  content: 'there was an error up voting the token',
+                  flags: MessageFlags.Ephemeral,
+                });
+                return;
+              } else {
+                if (vote.hasVote) {
+                  await interaction.followUp({
+                    content: 'You already voted this token',
+                    flags: MessageFlags.Ephemeral,
+                  });
+                  return;
+                }
+                await this.refreshEmbed(interaction, address);
+                await interaction.followUp({
+                  content: 'You upvoted the token!',
+                  flags: MessageFlags.Ephemeral,
+                });
+                return;
+              }
+            }
+          }
+
+          break;
+        } catch (error) {
+          console.error('Upvote case error:', error);
+          await interaction.followUp({
+            content: 'Failed to Upvote  An error occurred.',
+            flags: MessageFlags.Ephemeral,
+          });
+          break;
         }
-        await interaction.reply({
-          content: 'You upvoted the token!',
-          flags: MessageFlags.Ephemeral,
-        });
-        break;
+
       case 'downvote':
-        await interaction.reply({
-          content: 'You downvoted the token!',
-          flags: MessageFlags.Ephemeral,
-        });
-        break;
-      case 'chart':
-        await interaction.reply({
-          content: 'Chart feature coming soon!',
-          ephemeral: true,
-        });
-        break;
-      case 'inspect':
-        await interaction.reply({
-          content: 'Inspect feature coming soon!',
-          ephemeral: true,
-        });
-        break;
-      case 'bot_info':
-        await interaction.reply({
-          content: 'Bot info feature coming soon!',
-          ephemeral: true,
-        });
-        break;
+        try {
+          const embed = interaction.message.embeds[0];
+          // Defer the interaction to allow more time for the API call
+          await interaction.deferUpdate();
+
+          const userExist = await this.findOrCreateUserWallet(
+            user.id,
+            'discord',
+          );
+
+          if (userExist) {
+            const encryptedSVMWallet =
+              await this.walletService.decryptSVMWallet(
+                `${process.env.DEFAULT_WALLET_PIN}`,
+                userExist.svmWalletDetails,
+              );
+            const { token } = await this.rugCheckService.signLoginPayload(
+              encryptedSVMWallet.privateKey,
+            );
+            const address = this.extractAddress(embed);
+
+            if (token && address) {
+              const vote = await this.rugCheckService.voteOnToken(
+                token,
+                address,
+                false,
+              );
+              if (!vote) {
+                await interaction.followUp({
+                  content: 'there was an error up voting the token',
+                  flags: MessageFlags.Ephemeral,
+                });
+                return;
+              } else {
+                if (vote.hasVote) {
+                  await interaction.followUp({
+                    content: 'You already voted this token',
+                    flags: MessageFlags.Ephemeral,
+                  });
+                  return;
+                }
+                await this.refreshEmbed(interaction, address);
+                await interaction.followUp({
+                  content: 'You downvoted the token!',
+                  flags: MessageFlags.Ephemeral,
+                });
+                return;
+              }
+            }
+          }
+
+          break;
+        } catch (error) {
+          console.error('downvote case error:', error);
+          await interaction.followUp({
+            content: 'Failed to down vote  An error occurred.',
+            flags: MessageFlags.Ephemeral,
+          });
+          break;
+        }
+
       case 'refresh':
         try {
           const embed = interaction.message.embeds[0];
@@ -499,95 +580,37 @@ export class DiscordBotService {
             if (!tokenAddress) {
               await interaction.reply({
                 content: 'Unable to refresh: Token address not found.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               });
               return;
             }
-          }
+            // Disable the "Refresh" button
+            const currentComponents = interaction.message.components;
 
-          await interaction.update({
-            content: 'Refreshing...',
-            embeds: [],
-            components: [],
-          });
+            const disabledComponents =
+              this.disableRefreshButton(currentComponents);
 
-          const data =
-            await this.rugCheckService.getTokenReport$Vote(tokenAddress);
-
-          if (!data.tokenDetail || !data.tokenVotes) {
-            await interaction.editReply({
-              content: 'Failed to refresh: API error.',
-              embeds: [],
-              components: [],
+            await interaction.update({
+              content: interaction.message.content,
+              embeds: [embed],
+              components: disabledComponents,
             });
+
+            // Defer the interaction to allow more time for the API call
+            // await interaction.deferUpdate();
+
+            await this.refreshEmbed(interaction, tokenAddress);
             return;
           }
-
-          const newEmbed = this.buildTokenEmbed(
-            data.tokenDetail,
-            data.tokenVotes,
-          );
-          const newComponents = this.buildButtonComponents(
-            data.tokenDetail.mint,
-            data.tokenVotes,
-          );
-
-          await interaction.editReply({
-            content: null,
-            embeds: [newEmbed],
-            components: newComponents,
-          });
+          break;
         } catch (error) {
-          console.error('Refresh error:', error);
-          await interaction.editReply({
+          console.error('Refresh case error:', error);
+          await interaction.followUp({
             content: 'Failed to refresh: An error occurred.',
-            embeds: [],
-            components: [],
+            flags: MessageFlags.Ephemeral,
           });
+          break;
         }
-        break;
-      case 'track_insiders':
-        const message = interaction.message as Message;
-        const embed = message.embeds[0];
-        const footerData = embed.footer?.text.includes('insiderNetworks')
-          ? JSON.parse(embed.footer.text)
-          : {};
-        const insiderWallets = footerData.insiderNetworks?.[0]?.wallets || [];
-
-        if (insiderWallets.length === 0) {
-          await interaction.reply({
-            content: 'No insider wallets available.',
-            ephemeral: true,
-          });
-          return;
-        }
-
-        const dmEmbed = new EmbedBuilder()
-          .setTitle('Insider Wallets Tracking')
-          .setDescription(
-            'Here are the insider wallets. Reply with the number to track one, or "all" to track all.',
-          )
-          .addFields({
-            name: 'Wallets',
-            value: insiderWallets
-              .map((w, i) => `${i + 1}. \`${this.shortenAddress(w)}\``)
-              .join('\n'),
-            inline: false,
-          })
-          .setColor('#00FF00');
-
-        await user.send({ embeds: [dmEmbed] });
-        await interaction.reply({
-          content: 'Check your DMs for insider wallet details!',
-          ephemeral: true,
-        });
-        break;
-      case 'track_holders':
-        await interaction.reply({
-          content: 'Tracking holders feature coming soon!',
-          ephemeral: true,
-        });
-        break;
       case 'track_creator':
         await interaction.reply({
           content: 'Tracking creator feature coming soon!',
@@ -597,10 +620,92 @@ export class DiscordBotService {
       default:
         await interaction.reply({
           content: 'Button clicked!',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
     }
   };
+
+  private async refreshEmbed(
+    interaction: any,
+    tokenAddress: string,
+  ): Promise<void> {
+    let data;
+    try {
+      data = await this.rugCheckService.getTokenReport$Vote(tokenAddress);
+      if (!data.tokenDetail || !data.tokenVotes) {
+        // Re-enable the button and keep the current embed on API error
+        const currentEmbed = interaction.message.embeds[0];
+        const reEnabledComponents = this.buildButtonComponents(tokenAddress, {
+          up: data?.tokenVotes?.up || 0,
+          down: data?.tokenVotes?.down || 0,
+          userVoted: false,
+        });
+        await interaction.editReply({
+          content: null,
+          embeds: [currentEmbed],
+          components: reEnabledComponents,
+        });
+        await interaction.followUp({
+          content: 'Failed to refresh',
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const newEmbed = this.buildTokenEmbed(data.tokenDetail, data.tokenVotes);
+      const newComponents = this.buildButtonComponents(
+        data.tokenDetail.mint,
+        data.tokenVotes,
+      );
+
+      await interaction.editReply({
+        content: null,
+        embeds: [newEmbed],
+        components: newComponents, // Re-enables the button
+      });
+    } catch (error) {
+      console.error('Refresh error:', error);
+      // Re-enable the button and keep the current embed on general error
+      const currentEmbed = interaction.message.embeds[0];
+      const reEnabledComponents = this.buildButtonComponents(tokenAddress, {
+        up: data?.tokenVotes?.up || 0,
+        down: data?.tokenVotes?.down || 0,
+        userVoted: false,
+      });
+      await interaction.editReply({
+        content: null,
+        embeds: [currentEmbed],
+        components: reEnabledComponents,
+      });
+      await interaction.followUp({
+        content: 'Failed to refresh: An error occurred.',
+        ephemeral: true,
+      });
+    }
+  }
+
+  private disableRefreshButton(
+    components: any[],
+  ): ActionRowBuilder<ButtonBuilder>[] {
+    const newComponents = components.map((row) => {
+      const actionRow = ActionRowBuilder.from(
+        row,
+      ) as ActionRowBuilder<ButtonBuilder>;
+      const updatedButtons = actionRow.components.map((component) => {
+        const button = ButtonBuilder.from(
+          component as unknown as ButtonComponent,
+        );
+        const customId = (button.data as { customId?: string }).customId;
+        if (customId === 'refresh') {
+          button.setDisabled(true);
+        }
+        return button;
+      });
+      actionRow.setComponents(updatedButtons);
+      return actionRow;
+    });
+    return newComponents as ActionRowBuilder<ButtonBuilder>[];
+  }
 
   async findOrCreateUserWallet(
     userId: number,
@@ -631,6 +736,26 @@ export class DiscordBotService {
       svmWalletDetails: user.svmWalletDetails,
     };
   }
+
+  private extractAddress = (embed: any): string => {
+    const tokenAddressMatch = embed.description?.match(
+      /\*\*Contract Address:\*\* `([^`]+)`/,
+    );
+
+    let tokenAddress: string;
+    if (tokenAddressMatch && tokenAddressMatch[1]) {
+      tokenAddress = tokenAddressMatch[1];
+      return tokenAddress;
+    } else {
+      const footerText = embed.footer?.text || '';
+      const mintMatch = footerText.match(/Mint: (.+)/);
+      tokenAddress = mintMatch ? mintMatch[1] : '';
+      if (!tokenAddress) {
+        return null;
+      }
+      return tokenAddress;
+    }
+  };
 
   // Utility to format large numbers
   private formatNumber = (num: number): string => {

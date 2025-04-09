@@ -100,7 +100,6 @@ export class RugcheckService {
 
     // Sign the message
     const signature = nacl.sign.detached(encodedMessage, keypair.secretKey);
-    console.log(signature);
 
     // Final payload
     const payload = {
@@ -111,10 +110,10 @@ export class RugcheckService {
       },
       wallet: publicKey,
     };
-    console.log(payload);
+
     try {
       const token = await this.httpService.axiosRef.post(
-        `https://api.rugcheck.xyz/v1/auth/login/solana`,
+        `https://api.rugcheck.xyz/auth/login/solana`,
         payload,
         {
           headers: {
@@ -123,9 +122,44 @@ export class RugcheckService {
         },
       );
 
-      return token;
+      return token.data;
     } catch (error) {
       console.log(error);
     }
   }
+
+  voteOnToken = async (
+    authToken: string,
+    mint: string,
+    vote: boolean,
+  ): Promise<any> => {
+    try {
+      const payload = {
+        mint,
+        side: vote,
+      };
+      const response = await this.httpService.axiosRef.post(
+        `https://api.rugcheck.xyz/v1/tokens/${mint}/vote`,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+        },
+      );
+      if (response.status === 200) {
+        console.log('response :', response.data);
+        return { vote: response.data };
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.log(error.response.data);
+      if (error.response.data.error === `vote failed`) {
+        return { hasVote: true };
+      }
+      return null;
+    }
+  };
 }
