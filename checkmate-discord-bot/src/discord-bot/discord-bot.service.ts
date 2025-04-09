@@ -1,5 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import {
   TextChannel,
   Client,
@@ -12,9 +14,11 @@ import {
   MessageFlags,
 } from 'discord.js';
 import * as dotenv from 'dotenv';
+import { User } from 'src/database/schemas/user.schema';
+import { WalletService } from 'src/wallet/wallet.service';
+import { RugcheckService } from 'src/rugcheck/rugcheck.service';
 dotenv.config();
 
-// Type definition for token data
 interface TokenData {
   mint: string;
   tokenMeta: { name: string; symbol: string; uri?: string };
@@ -68,7 +72,12 @@ export class DiscordBotService {
   private readonly logger = new Logger(DiscordBotService.name);
   private readonly client: Client;
 
-  constructor(private readonly httpService: HttpService) {
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly walletService: WalletService,
+    private readonly rugCheckService: RugcheckService,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+  ) {
     this.client = new Client({
       intents: ['Guilds', 'GuildMessages', 'DirectMessages', 'MessageContent'],
     });
@@ -88,7 +97,7 @@ export class DiscordBotService {
   };
 
   handleRecievedMessages = async (message: Message) => {
-    console.log(message);
+    // console.log(message);
     if (message.author.id === process.env.DISCORD_BOT_ID) return;
 
     const regex = /\b[1-9A-HJ-NP-Za-km-z]{43,44}\b/;
@@ -98,41 +107,20 @@ export class DiscordBotService {
 
     console.log('Found address:', match[0]);
     try {
-      const [reportResult, votesResult] = await Promise.allSettled([
-        this.httpService.axiosRef.get(
-          `https://api.rugcheck.xyz/v1/tokens/${match[0]}/report`,
-        ),
-        this.httpService.axiosRef.get(
-          `https://api.rugcheck.xyz/v1/tokens/${match[0]}/votes`,
-        ),
-      ]);
+      const data = await this.rugCheckService.getTokenReport$Vote(match[0]);
 
-      const reportData =
-        reportResult.status === 'fulfilled' && !reportResult.value.data.error
-          ? reportResult.value.data
-          : null;
-
-      const votesData =
-        votesResult.status === 'fulfilled' ? votesResult.value.data : null;
-
-      if (!reportData && !votesData) {
-        return;
-      }
-
-      const tokenDetail: TokenData = reportData;
-      const tokenVotes: VoteData = votesData;
-      console.log(tokenDetail);
-      console.log(votesData);
+      console.log(data.tokenDetail);
+      console.log(data.tokenVotes);
 
       const channel = this.client.channels.cache.get(message.channelId);
       if (!channel?.isTextBased()) return;
 
       await (channel as TextChannel).sendTyping();
 
-      const embed = this.buildTokenEmbed(tokenDetail, tokenVotes);
+      const embed = this.buildTokenEmbed(data.tokenDetail, data.tokenVotes);
       const components = this.buildButtonComponents(
-        tokenDetail.mint,
-        tokenVotes,
+        data.tokenDetail.mint,
+        data.tokenVotes,
       );
 
       await message.reply({ embeds: [embed], components });
@@ -442,12 +430,29 @@ export class DiscordBotService {
   };
 
   handleInteraction = async (interaction) => {
+    // console.log(interaction);
     if (!interaction.isButton()) return;
 
     const user = interaction.user;
 
+    console.log('user  :', user.id);
+
     switch (interaction.customId) {
       case 'upvote':
+        const userExist = await this.findOrCreateUserWallet(user.id, 'discord');
+        console.log(userExist);
+        if (userExist) {
+          const encryptedSVMWallet = await this.walletService.decryptSVMWallet(
+            `${process.env.DEFAULT_WALLET_PIN}`,
+            userExist.svmWalletDetails,
+          );
+          console.log(encryptedSVMWallet.privateKey);
+          const payload = await this.rugCheckService.signLoginPayload(
+            encryptedSVMWallet.privateKey,
+          );
+
+          console.log(payload);
+        }
         await interaction.reply({
           content: 'You upvoted the token!',
           flags: MessageFlags.Ephemeral,
@@ -456,7 +461,7 @@ export class DiscordBotService {
       case 'downvote':
         await interaction.reply({
           content: 'You downvoted the token!',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
         break;
       case 'chart':
@@ -506,25 +511,10 @@ export class DiscordBotService {
             components: [],
           });
 
-          const [reportResult, votesResult] = await Promise.allSettled([
-            this.httpService.axiosRef.get(
-              `https://api.rugcheck.xyz/v1/tokens/${tokenAddress}/report`,
-            ),
-            this.httpService.axiosRef.get(
-              `https://api.rugcheck.xyz/v1/tokens/${tokenAddress}/votes`,
-            ),
-          ]);
+          const data =
+            await this.rugCheckService.getTokenReport$Vote(tokenAddress);
 
-          const reportData =
-            reportResult.status === 'fulfilled' &&
-            !reportResult.value.data.error
-              ? reportResult.value.data
-              : null;
-
-          const votesData =
-            votesResult.status === 'fulfilled' ? votesResult.value.data : null;
-
-          if (!reportData || !votesData) {
+          if (!data.tokenDetail || !data.tokenVotes) {
             await interaction.editReply({
               content: 'Failed to refresh: API error.',
               embeds: [],
@@ -533,14 +523,13 @@ export class DiscordBotService {
             return;
           }
 
-          const tokenDetail: TokenData = reportData;
-          const tokenVote: VoteData = votesData;
-          console.log('Refreshed token data:', tokenDetail);
-
-          const newEmbed = this.buildTokenEmbed(tokenDetail, tokenVote);
+          const newEmbed = this.buildTokenEmbed(
+            data.tokenDetail,
+            data.tokenVotes,
+          );
           const newComponents = this.buildButtonComponents(
-            tokenDetail.mint,
-            tokenVote,
+            data.tokenDetail.mint,
+            data.tokenVotes,
           );
 
           await interaction.editReply({
@@ -612,6 +601,36 @@ export class DiscordBotService {
         });
     }
   };
+
+  async findOrCreateUserWallet(
+    userId: number,
+    platform: 'discord' | 'telegram',
+  ): Promise<{ svmWalletAddress: string; svmWalletDetails: string }> {
+    let user = await this.userModel.findOne({ userId, platform });
+
+    if (!user) {
+      const newSVMWallet = await this.walletService.createSVMWallet();
+      const [encryptedSVMWalletDetails] = await Promise.all([
+        this.walletService.encryptSVMWallet(
+          process.env.DEFAULT_WALLET_PIN!,
+          newSVMWallet.privateKey,
+        ),
+      ]);
+      user = new this.userModel({
+        userId,
+        platform,
+        svmWalletAddress: newSVMWallet.address,
+        svmWalletDetails: encryptedSVMWalletDetails.json,
+      });
+
+      await user.save();
+    }
+
+    return {
+      svmWalletAddress: user.svmWalletAddress,
+      svmWalletDetails: user.svmWalletDetails,
+    };
+  }
 
   // Utility to format large numbers
   private formatNumber = (num: number): string => {
