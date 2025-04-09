@@ -276,3 +276,27 @@
 //     }
 //   };
 // }
+
+// (async () => {
+//     // Generate a new Keypair or use your existing secret key
+//     const secretKey = Uint8Array.from([your secret key array here]);
+//     const keypair = solanaWeb3.Keypair.fromSecretKey(secretKey);
+
+//     // Create the message object to sign
+//     const messageObj = {
+//         message: "Sign-in to Rugcheck.xyz",
+//         timestamp: 1723077205939,  // Replace this with your specific timestamp
+//         publicKey: keypair.publicKey.toString()
+//     };
+
+//     // Convert message object to bytes (UTF-8 encoding)
+//     const encodedMessage = new TextEncoder().encode(JSON.stringify(messageObj));
+//     console.log("Message bytes in JavaScript:", Array.from(encodedMessage));
+
+//     // Sign the message using TweetNacl
+//     const signedMessage = nacl.sign.detached(encodedMessage, keypair.secretKey);
+
+//     console.log("Signed message:", Array.from(signedMessage));
+//     console.log("Public Key:", keypair.publicKey.toString());
+//     console.log("Message to sign:", JSON.stringify(messageObj));
+// })();

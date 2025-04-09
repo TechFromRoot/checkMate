@@ -429,6 +429,52 @@ export class DiscordBotService {
     return [row1, row2, row4];
   };
 
+  private async refreshEmbed(
+    interaction: any,
+    tokenAddress: string,
+  ): Promise<void> {
+    await interaction.update({
+      content: 'Refreshing...',
+      embeds: [],
+      components: [],
+    });
+
+    const data = await this.rugCheckService.getTokenReport$Vote(tokenAddress);
+    if (!data.tokenDetail || !data.tokenVotes) {
+      await interaction.editReply({
+        content: 'Failed to refresh: API error.',
+        embeds: [],
+        components: [],
+      });
+      return;
+    }
+
+    const newEmbed = this.buildTokenEmbed(data.tokenDetail, data.tokenVotes);
+    const newComponents = this.buildButtonComponents(
+      data.tokenDetail.mint,
+      data.tokenVotes,
+    );
+
+    await interaction.editReply({
+      content: null,
+      embeds: [newEmbed],
+      components: newComponents,
+    });
+  }
+
+  private extractTokenAddress(embed: any): string | null {
+    const tokenAddressMatch = embed.description?.match(
+      /\*\*Contract Address:\*\* `([^`]+)`/,
+    );
+    if (tokenAddressMatch && tokenAddressMatch[1]) {
+      return tokenAddressMatch[1];
+    }
+
+    const footerText = embed.footer?.text || '';
+    const mintMatch = footerText.match(/Mint: (.+)/);
+    return mintMatch ? mintMatch[1] : null;
+  }
+
   handleInteraction = async (interaction) => {
     // console.log(interaction);
     if (!interaction.isButton()) return;
@@ -439,31 +485,86 @@ export class DiscordBotService {
 
     switch (interaction.customId) {
       case 'upvote':
-        const userExist = await this.findOrCreateUserWallet(user.id, 'discord');
-        console.log(userExist);
-        if (userExist) {
+        try {
+          const embed = interaction.message.embeds[0];
+          const tokenAddress = this.extractTokenAddress(embed);
+          if (!tokenAddress) {
+            await interaction.reply({
+              content: 'Failed to upvote this token: Token address not found.',
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          // Check or create user wallet
+          const userWallet = await this.findOrCreateUserWallet(
+            user.id,
+            'discord',
+          );
+          if (!userWallet) {
+            await interaction.reply({
+              content: 'Failed to upvote: User wallet not found or created.',
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          // Decrypt wallet and sign login payload
           const encryptedSVMWallet = await this.walletService.decryptSVMWallet(
             `${process.env.DEFAULT_WALLET_PIN}`,
-            userExist.svmWalletDetails,
+            userWallet.svmWalletDetails,
           );
-          console.log(encryptedSVMWallet.privateKey);
-          const payload = await this.rugCheckService.signLoginPayload(
+          const { token } = await this.rugCheckService.signLoginPayload(
             encryptedSVMWallet.privateKey,
           );
+          if (!token) {
+            await interaction.reply({
+              content: 'Failed to upvote: Authentication token not generated.',
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
 
-          console.log(payload);
+          // Perform the upvote
+          const upVote = await this.rugCheckService.voteOnToken(
+            token,
+            tokenAddress,
+            true,
+          );
+          if (!upVote) {
+            await interaction.reply({
+              content: 'Failed to upvote the token.',
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          if (upVote.hasVote) {
+            await interaction.reply({
+              content: 'You already upvoted this token!',
+              flags: MessageFlags.Ephemeral,
+            });
+            return;
+          }
+
+          // Refresh the embed after successful upvote
+          await this.refreshEmbed(interaction, tokenAddress);
+        } catch (error) {
+          console.error('Upvote error:', error);
+          await interaction.reply({
+            content: 'Failed to upvote: An error occurred.',
+            flags: MessageFlags.Ephemeral,
+          });
         }
-        await interaction.reply({
-          content: 'You upvoted the token!',
-          flags: MessageFlags.Ephemeral,
-        });
         break;
+
       case 'downvote':
         await interaction.reply({
           content: 'You downvoted the token!',
           flags: MessageFlags.Ephemeral,
         });
         break;
+
       case 'chart':
         await interaction.reply({
           content: 'Chart feature coming soon!',
@@ -486,7 +587,7 @@ export class DiscordBotService {
         try {
           const embed = interaction.message.embeds[0];
           const tokenAddressMatch = embed.description?.match(
-            /\*\*Contract Address:\*\* `([^`]+)`/,
+            /\*\*Mint:\*\* `([^`]+)`/,
           );
 
           let tokenAddress: string;
@@ -499,7 +600,7 @@ export class DiscordBotService {
             if (!tokenAddress) {
               await interaction.reply({
                 content: 'Unable to refresh: Token address not found.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
               });
               return;
             }

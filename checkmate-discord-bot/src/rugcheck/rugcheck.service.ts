@@ -1,7 +1,13 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { Keypair } from '@solana/web3.js';
-import * as nacl from 'tweetnacl';
+import nacl, { sign } from 'tweetnacl';
+import {
+  decodeBase64,
+  decodeUTF8,
+  encodeBase64,
+  encodeUTF8,
+} from 'tweetnacl-util';
 import bs58 from 'bs58';
 
 interface TokenData {
@@ -50,6 +56,23 @@ interface VoteData {
   userVoted: boolean;
 }
 
+// interface LoginMessage {
+//   message: string;
+//   timestamp: number;
+//   publicKey: string;
+// }
+
+// interface Signature {
+//   data: number[];
+//   type: 'ed25519';
+// }
+
+// interface LoginPayload {
+//   message: LoginMessage;
+//   signature: Signature;
+//   wallet: string;
+// }
+
 @Injectable()
 export class RugcheckService {
   constructor(private readonly httpService: HttpService) {}
@@ -81,7 +104,7 @@ export class RugcheckService {
     return { tokenDetail, tokenVotes };
   };
 
-  async signLoginPayload(base58PrivateKey: string): Promise<any> {
+  signLoginPayload = async (base58PrivateKey: string): Promise<any> => {
     // Decode private key
     const secretKey = bs58.decode(base58PrivateKey);
     const keypair = Keypair.fromSecretKey(secretKey);
@@ -96,12 +119,20 @@ export class RugcheckService {
     };
 
     const messageJson = JSON.stringify(messageObject);
+
     const encodedMessage = new TextEncoder().encode(messageJson);
+    // const messageBytes = decodeUTF8(messageJson);
 
     // Sign the message
-    const signature = nacl.sign.detached(encodedMessage, keypair.secretKey);
-    console.log(signature);
+    const signature = sign.detached(encodedMessage, keypair.secretKey);
 
+    const result = sign.detached.verify(
+      encodedMessage,
+      signature,
+      keypair.publicKey.toBytes(),
+    );
+
+    console.log(`result  :`, result);
     // Final payload
     const payload = {
       message: messageObject,
@@ -111,10 +142,11 @@ export class RugcheckService {
       },
       wallet: publicKey,
     };
-    console.log(payload);
+
+    // console.log(payload);
     try {
       const token = await this.httpService.axiosRef.post(
-        `https://api.rugcheck.xyz/v1/auth/login/solana`,
+        `https://api.rugcheck.xyz/auth/login/solana`,
         payload,
         {
           headers: {
@@ -123,9 +155,44 @@ export class RugcheckService {
         },
       );
 
-      return token;
+      return token.data;
     } catch (error) {
-      console.log(error);
+      console.log(error.response.data);
     }
-  }
+  };
+
+  voteOnToken = async (
+    authToken: string,
+    mint: string,
+    vote: boolean,
+  ): Promise<any> => {
+    try {
+      const payload = {
+        mint,
+        side: vote,
+      };
+      const response = await this.httpService.axiosRef.post(
+        `https://api.rugcheck.xyz/v1/tokens/${mint}/vote`,
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`,
+          },
+        },
+      );
+      if (response.status === 200) {
+        console.log('response :', response.data);
+        return { vote: response.data };
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.log(error.response.data);
+      if (error.response.data.error === `vote failed`) {
+        return { hasVote: true };
+      }
+      return null;
+    }
+  };
 }
