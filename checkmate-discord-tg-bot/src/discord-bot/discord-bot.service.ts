@@ -373,7 +373,9 @@ export class DiscordBotService {
 
     const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
-        .setURL(` https://fluxbeam.xyz/${tokenAddress}?chain=solana`)
+        .setURL(
+          `https://fluxbeam.xyz/${tokenAddress}?chain=solana&utm_source=rugcheck`,
+        )
         .setEmoji('📈')
         .setStyle(ButtonStyle.Link),
       new ButtonBuilder()
