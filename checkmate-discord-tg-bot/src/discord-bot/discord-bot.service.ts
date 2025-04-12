@@ -421,10 +421,10 @@ export class DiscordBotService {
         .setStyle(ButtonStyle.Link),
 
       new ButtonBuilder()
-        .setCustomId('track_creator')
+        .setURL(`${process.env.BOT_URL}?start=ca-${tokenAddress}`)
         .setLabel('Track Creator')
         .setEmoji('👤')
-        .setStyle(ButtonStyle.Primary),
+        .setStyle(ButtonStyle.Link),
     );
 
     return [row1, row2, row4];
