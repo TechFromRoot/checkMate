@@ -20,4 +20,4 @@ Validator function type for actions/evaluators
 
 ## Defined in
 
-packages/core/src/types.ts:385
+[packages/core/src/types.ts:385](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/types.ts#L385)

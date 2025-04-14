@@ -10,4 +10,4 @@
 
 ## Defined in
 
-packages/core/src/embedding.ts:118
+[packages/core/src/embedding.ts:118](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/embedding.ts#L118)

@@ -6,4 +6,4 @@
 
 ## Defined in
 
-packages/core/src/parsing.ts:8
+[packages/core/src/parsing.ts:8](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/parsing.ts#L8)

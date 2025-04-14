@@ -20,4 +20,4 @@ Configuration options specific to the provider.
 
 ## Defined in
 
-packages/core/src/generation.ts:1173
+[packages/core/src/generation.ts:1173](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/generation.ts#L1173)

@@ -25,4 +25,4 @@ A string containing formatted examples of conversations.
 
 ## Defined in
 
-packages/core/src/actions.ts:11
+[packages/core/src/actions.ts:11](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/actions.ts#L11)

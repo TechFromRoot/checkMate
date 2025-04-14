@@ -22,4 +22,4 @@ string
 
 ## Defined in
 
-packages/core/src/messages.ts:45
+[packages/core/src/messages.ts:45](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/messages.ts#L45)

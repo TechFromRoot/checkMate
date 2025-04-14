@@ -16,4 +16,4 @@
 
 ## Defined in
 
-packages/core/src/types.ts:1154
+[packages/core/src/types.ts:1154](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/types.ts#L1154)

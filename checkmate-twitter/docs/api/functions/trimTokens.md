@@ -28,4 +28,4 @@ The truncated text
 
 ## Defined in
 
-packages/core/src/generation.ts:455
+[packages/core/src/generation.ts:455](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/generation.ts#L455)

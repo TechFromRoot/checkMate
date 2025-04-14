@@ -24,4 +24,4 @@
 
 ## Defined in
 
-packages/core/src/goals.ts:8
+[packages/core/src/goals.ts:8](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/goals.ts#L8)

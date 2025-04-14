@@ -24,4 +24,4 @@ An object parsed from the JSON string if successful; otherwise, null or the resu
 
 ## Defined in
 
-packages/core/src/parsing.ts:103
+[packages/core/src/parsing.ts:103](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/parsing.ts#L103)

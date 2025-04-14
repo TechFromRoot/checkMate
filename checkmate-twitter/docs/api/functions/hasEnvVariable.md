@@ -20,4 +20,4 @@ True if the environment variable exists
 
 ## Defined in
 
-packages/core/src/settings.ts:118
+[packages/core/src/settings.ts:118](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/settings.ts#L118)

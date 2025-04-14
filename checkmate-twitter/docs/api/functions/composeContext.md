@@ -44,4 +44,4 @@ const context = composeContext({ state, template });
 
 ## Defined in
 
-packages/core/src/context.ts:24
+[packages/core/src/context.ts:24](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/context.ts#L24)

@@ -40,4 +40,4 @@ API Keys with specific formats
 
 ## Defined in
 
-packages/core/src/environment.ts:5
+[packages/core/src/environment.ts:5](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/environment.ts#L5)

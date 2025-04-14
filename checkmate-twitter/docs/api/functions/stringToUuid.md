@@ -14,4 +14,4 @@
 
 ## Defined in
 
-packages/core/src/uuid.ts:4
+[packages/core/src/uuid.ts:4](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/uuid.ts#L4)

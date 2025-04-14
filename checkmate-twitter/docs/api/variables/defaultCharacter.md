@@ -6,4 +6,4 @@
 
 ## Defined in
 
-packages/core/src/defaultCharacter.ts:3
+[packages/core/src/defaultCharacter.ts:3](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/defaultCharacter.ts#L3)

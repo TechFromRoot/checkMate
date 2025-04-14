@@ -86,4 +86,4 @@ Model configurations by provider
 
 ## Defined in
 
-packages/core/src/types.ts:188
+[packages/core/src/types.ts:188](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/types.ts#L188)

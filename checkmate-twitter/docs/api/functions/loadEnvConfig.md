@@ -19,4 +19,4 @@ If no .env file is found in Node.js environment
 
 ## Defined in
 
-packages/core/src/settings.ts:79
+[packages/core/src/settings.ts:79](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/settings.ts#L79)

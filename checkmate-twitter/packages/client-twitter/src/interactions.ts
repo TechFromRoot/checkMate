@@ -1,15 +1,9 @@
 import { SearchMode, Tweet } from "agent-twitter-client";
 import {
-    composeContext,
-    generateMessageResponse,
-    generateShouldRespond,
-    messageCompletionFooter,
-    shouldRespondFooter,
     Content,
     HandlerCallback,
     IAgentRuntime,
     Memory,
-    ModelClass,
     State,
     stringToUuid,
     elizaLogger,
@@ -18,66 +12,56 @@ import {
 import { ClientBase } from "./base";
 import { buildConversationThread, sendTweet, wait } from "./utils.ts";
 
-export const twitterMessageHandlerTemplate =
-    `
-# Areas of Expertise
-{{knowledge}}
+interface TokenData {
+    mint: string;
+    tokenMeta: { name: string; symbol: string; uri?: string };
+    token: { supply: number; decimals: number };
+    creator: string;
+    price?: number;
+    totalHolders?: number;
+    totalMarketLiquidity?: number;
+    rugged?: boolean;
+    score?: number;
+    score_normalised?: number;
+    risks?: { name: string; description: string; level: string }[];
+    topHolders?: {
+        pct: number;
+        owner: string;
+        amount: number;
+        insider: boolean;
+    }[];
+    insiderNetworks?: {
+        tokenAmount: number;
+        size: number;
+        id?: string;
+        wallets?: string[];
+    }[];
+    graphInsidersDetected?: number;
+    verification?: {
+        mint: string;
+        payer: string;
+        name: string;
+        symbol: string;
+        description: string;
+        jup_verified: boolean;
+        jup_strict: boolean;
+        links: string[];
+    };
+    freezeAuthority?: string | null;
+    mintAuthority?: string | null;
+    fileMeta?: { image?: string };
+}
 
-# About {{agentName}} (@{{twitterUserName}}):
-{{bio}}
-{{lore}}
-{{topics}}
+interface VoteData {
+    up: number;
+    down: number;
+    userVoted: boolean;
+}
 
-{{providers}}
-
-{{characterPostExamples}}
-
-{{postDirections}}
-
-Recent interactions between {{agentName}} and other users:
-{{recentPostInteractions}}
-
-{{recentPosts}}
-
-# Task: Generate a post/reply in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}) while using the thread of tweets as additional context:
-Current Post:
-{{currentPost}}
-
-Thread of Tweets You Are Replying To:
-{{formattedConversation}}
-
-{{actions}}
-
-# Task: Generate a post in the voice, style and perspective of {{agentName}} (@{{twitterUserName}}). Include an action, if appropriate. {{actionNames}}:
-{{currentPost}}
-` + messageCompletionFooter;
-
-export const twitterShouldRespondTemplate =
-    `# INSTRUCTIONS: Determine if {{agentName}} (@{{twitterUserName}}) should respond to the message and participate in the conversation. Do not comment. Just respond with "true" or "false".
-
-Response options are RESPOND, IGNORE and STOP .
-
-{{agentName}} should respond to messages that are directed at them, or participate in conversations that are interesting or relevant to their background, IGNORE messages that are irrelevant to them, and should STOP if the conversation is concluded.
-
-{{agentName}} is in a room with other users and wants to be conversational, but not annoying.
-{{agentName}} should RESPOND to messages that are directed at them, or participate in conversations that are interesting or relevant to their background.
-If a message is not interesting or relevant, {{agentName}} should IGNORE.
-Unless directly RESPONDing to a user, {{agentName}} should IGNORE messages that are very short or do not contain much information.
-If a user asks {{agentName}} to stop talking, {{agentName}} should STOP.
-If {{agentName}} concludes a conversation and isn't part of the conversation anymore, {{agentName}} should STOP.
-
-{{recentPosts}}
-
-IMPORTANT: {{agentName}} (aka @{{twitterUserName}}) is particularly sensitive about being annoying, so if there is any doubt, it is better to IGNORE than to RESPOND.
-
-{{currentPost}}
-
-Thread of Tweets You Are Replying To:
-
-{{formattedConversation}}
-
-# INSTRUCTIONS: Respond with [RESPOND] if {{agentName}} should respond, or [IGNORE] if {{agentName}} should not respond to the last message and [STOP] if {{agentName}} should stop participating in the conversation.
-` + shouldRespondFooter;
+interface TweetData {
+    text: string;
+    media?: string; // URL to image (e.g., token logo)
+}
 
 export class TwitterInteractionClient {
     client: ClientBase;
@@ -93,9 +77,8 @@ export class TwitterInteractionClient {
             this.handleTwitterInteractions();
             setTimeout(
                 handleTwitterInteractionsLoop,
-                Number(
-                    this.runtime.getSetting("TWITTER_POLL_INTERVAL") || 120
-                ) * 1000 // Default to 2 minutes
+                Number(this.runtime.getSetting("TWITTER_POLL_INTERVAL") || 60) *
+                    1000 // Default to 2 minutes
             );
         };
         handleTwitterInteractionsLoop();
@@ -168,6 +151,8 @@ export class TwitterInteractionClient {
                         tweet,
                         this.client
                     );
+
+                    // console.log("this is the user tweet  :", tweet.text);
 
                     const message = {
                         content: { text: tweet.text },
@@ -279,52 +264,38 @@ export class TwitterInteractionClient {
             this.client.saveRequestMessage(message, state);
         }
 
-        const shouldRespondContext = composeContext({
-            state,
-            template:
-                this.runtime.character.templates
-                    ?.twitterShouldRespondTemplate ||
-                this.runtime.character?.templates?.shouldRespondTemplate ||
-                twitterShouldRespondTemplate,
-        });
+        const regex =
+            /^@(TestBots28|CheckM8_Bot).*?\b([1-9A-HJ-NP-Za-km-z]{32,44})\b/;
+        const match = tweet.text.match(regex);
 
-        const shouldRespond = await generateShouldRespond({
-            runtime: this.runtime,
-            context: shouldRespondContext,
-            modelClass: ModelClass.MEDIUM,
-        });
-
-        // Promise<"RESPOND" | "IGNORE" | "STOP" | null> {
-        if (shouldRespond !== "RESPOND") {
-            elizaLogger.log("Not responding to message");
-            return { text: "Response Decision:", action: shouldRespond };
+        if (!match) {
+            return;
         }
 
-        const context = composeContext({
-            state,
-            template:
-                this.runtime.character.templates
-                    ?.twitterMessageHandlerTemplate ||
-                this.runtime.character?.templates?.messageHandlerTemplate ||
-                twitterMessageHandlerTemplate,
-        });
+        const response1 = await this.getTokenReport$Vote(match[2]);
+        if (!response1.tokenDetail && !response1.tokenVotes) {
+            return;
+        }
 
-        elizaLogger.debug("Interactions prompt:\n" + context);
+        const generatedTweet = await this.getTokenDisplayTweet(
+            response1.tokenDetail,
+            response1.tokenVotes
+        );
 
-        const response = await generateMessageResponse({
-            runtime: this.runtime,
-            context,
-            modelClass: ModelClass.MEDIUM,
-        });
-
-        const removeQuotes = (str: string) =>
-            str.replace(/^['"](.*)['"]$/, "$1");
+        const response: Content = {
+            text: generatedTweet.text,
+            url: tweet.permanentUrl,
+            inReplyTo: tweet.inReplyToStatusId
+                ? stringToUuid(
+                      tweet.inReplyToStatusId + "-" + this.runtime.agentId
+                  )
+                : undefined,
+        };
 
         const stringId = stringToUuid(tweet.id + "-" + this.runtime.agentId);
 
         response.inReplyTo = stringId;
-
-        response.text = removeQuotes(response.text);
+        response.action = "REPLY";
 
         if (response.text) {
             try {
@@ -367,7 +338,7 @@ export class TwitterInteractionClient {
                     state
                 );
 
-                const responseInfo = `Context:\n\n${context}\n\nSelected Post: ${tweet.id} - ${tweet.username}: ${tweet.text}\nAgent's Output:\n${response.text}`;
+                const responseInfo = `Selected Post: ${tweet.id} - ${tweet.username}: ${tweet.text}\nAgent's Output:\n${response.text}`;
 
                 await this.runtime.cacheManager.set(
                     `twitter/tweet_generation_${tweet.id}.txt`,
@@ -512,4 +483,113 @@ export class TwitterInteractionClient {
 
         return thread;
     }
+
+    getTokenReport$Vote = async (mint: string) => {
+        try {
+            const [reportResponse, votesResponse] = await Promise.all([
+                fetch(`https://api.rugcheck.xyz/v1/tokens/${mint}/report`),
+                fetch(`https://api.rugcheck.xyz/v1/tokens/${mint}/votes`),
+            ]);
+
+            const reportResult = await reportResponse.json();
+            const votesResult = await votesResponse.json();
+
+            const tokenDetail: TokenData =
+                reportResult && !reportResult.error ? reportResult : null;
+            const tokenVotes: VoteData = votesResult || null;
+
+            if (!tokenDetail && !tokenVotes) {
+                console.error(
+                    `No data retrieved for mint ${mint}: both report and votes failed.`
+                );
+                return null;
+            }
+
+            return { tokenDetail, tokenVotes };
+        } catch (error) {
+            console.error(`Error fetching token data for mint ${mint}:`, error);
+            return null;
+        }
+    };
+
+    getTokenDisplayTweet = async (
+        token: TokenData,
+        tokenVote: VoteData
+    ): Promise<TweetData> => {
+        const lines: string[] = [];
+
+        // Token Header
+        lines.push(`${token.tokenMeta.name} (${token.tokenMeta.symbol}) 📊`);
+
+        // Key Metrics
+        const metrics: string[] = [];
+        if (token.price) {
+            metrics.push(`💰 Price: $${token.price.toFixed(8)}`);
+        }
+        if (token.price && token.token.supply) {
+            const marketCap =
+                token.price * (token.token.supply / 10 ** token.token.decimals);
+            metrics.push(`📈 MCap: $${this.formatNumber(marketCap)}`);
+        }
+        if (token.totalHolders) {
+            metrics.push(
+                `👥 Holders: ${this.formatNumber(token.totalHolders)}`
+            );
+        }
+
+        // Risk Score
+        const normalizedScore =
+            token.score_normalised !== undefined
+                ? token.score_normalised
+                : token.score
+                  ? Math.min(Math.round((token.score / 118101) * 100), 100)
+                  : undefined;
+        if (normalizedScore !== undefined) {
+            const riskEmoji =
+                normalizedScore >= 70
+                    ? "🔴"
+                    : normalizedScore >= 30
+                      ? "🟡"
+                      : "🟢";
+            metrics.push(`🚨 Risk: ${normalizedScore}/100 ${riskEmoji}`);
+        }
+
+        // Community Sentiment
+        if (tokenVote) {
+            metrics.push(`🚀 Up: ${tokenVote.up} | 💩 Down: ${tokenVote.down}`);
+        }
+
+        // Add metrics to lines (limit to 3 for brevity)
+        if (metrics.length > 0) {
+            lines.push(...metrics.slice(0, 9));
+        }
+
+        // Call-to-Action
+        lines.push(`🔎 Details: ${process.env.BOT_URL}?start=x-${token.mint}`);
+
+        // Build text
+        const text = lines.join("\n").substring(0, 280); // Ensure < 280 chars
+
+        // Prepare output
+        const tweet: TweetData = { text };
+
+        // Add media if available
+        if (token.fileMeta?.image) {
+            tweet.media = token.fileMeta.image;
+        }
+
+        return tweet;
+    };
+
+    shortenAddress = (address: string): string => {
+        if (!address || address.length < 10) return address;
+        return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    };
+
+    formatNumber = (num: number): string => {
+        if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
+        if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
+        if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
+        return num.toFixed(2);
+    };
 }

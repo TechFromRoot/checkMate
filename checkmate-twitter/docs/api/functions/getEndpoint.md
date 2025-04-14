@@ -14,4 +14,4 @@
 
 ## Defined in
 
-packages/core/src/models.ts:385
+[packages/core/src/models.ts:385](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/models.ts#L385)

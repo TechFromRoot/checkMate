@@ -8,4 +8,4 @@ Type inference
 
 ## Defined in
 
-packages/core/src/environment.ts:130
+[packages/core/src/environment.ts:130](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/environment.ts#L130)

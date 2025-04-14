@@ -100,6 +100,8 @@ export class TelegramBotService {
       const matchTrack = msg.text.trim().match(regexTrack);
       const deleteRegexTrack = /^\/start del-([a-zA-Z0-9]+)$/;
       const matchDelete = msg.text.trim().match(deleteRegexTrack);
+      const regexX = /^\/start x-([1-9A-HJ-NP-Za-km-z]{32,44})$/;
+      const matchX = msg.text.trim().match(regexX);
 
       if (matchTrack) {
         await this.checkMateBot.deleteMessage(msg.chat.id, msg.message_id);
@@ -161,13 +163,17 @@ export class TelegramBotService {
         }
       }
       if (
-        match &&
+        (match || matchX) &&
         (msg.chat.type === 'private' ||
           msg.chat.type === 'group' ||
           msg.chat.type === 'supergroup')
       ) {
+        if (matchX) {
+          await this.checkMateBot.deleteMessage(msg.chat.id, msg.message_id);
+        }
         try {
-          const data = await this.rugCheckService.getTokenReport$Vote(match[0]);
+          const token = match?.[0] || matchX?.[1];
+          const data = await this.rugCheckService.getTokenReport$Vote(token);
           if (!data.tokenDetail || !data.tokenVotes) {
             return;
           }
@@ -178,6 +184,16 @@ export class TelegramBotService {
 
           const replyMarkup = { inline_keyboard: tokenDetail.keyboard };
 
+          if (matchX) {
+            return await this.checkMateBot.sendMessage(
+              msg.chat.id,
+              tokenDetail.message,
+              {
+                reply_markup: replyMarkup,
+                parse_mode: 'Markdown',
+              },
+            );
+          }
           return await this.checkMateBot.sendMessage(
             msg.chat.id,
             tokenDetail.message,
@@ -662,7 +678,7 @@ export class TelegramBotService {
       const now = new Date();
       const twentyFourHoursAgo = new Date(
         now.getTime() - 3600 * 60 * 60 * 1000,
-      );
+      ); //TODO: change to 24
       const recentTransactions = transactions.filter(
         (tx) => new Date(tx.blockTimestamp) >= twentyFourHoursAgo,
       );

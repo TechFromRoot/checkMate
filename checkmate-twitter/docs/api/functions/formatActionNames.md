@@ -20,4 +20,4 @@ A comma-separated string of action names.
 
 ## Defined in
 
-packages/core/src/actions.ts:47
+[packages/core/src/actions.ts:47](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/actions.ts#L47)

@@ -20,4 +20,4 @@
 
 ## Defined in
 
-packages/core/src/relationships.ts:18
+[packages/core/src/relationships.ts:18](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/relationships.ts#L18)

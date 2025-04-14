@@ -8,4 +8,4 @@ Initialize settings based on environment
 
 ## Defined in
 
-packages/core/src/settings.ts:126
+[packages/core/src/settings.ts:126](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/settings.ts#L126)

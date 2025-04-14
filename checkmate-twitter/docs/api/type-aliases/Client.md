@@ -38,4 +38,4 @@ Stop client connection
 
 ## Defined in
 
-packages/core/src/types.ts:563
+[packages/core/src/types.ts:563](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/types.ts#L563)

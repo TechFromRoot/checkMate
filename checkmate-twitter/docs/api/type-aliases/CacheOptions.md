@@ -12,4 +12,4 @@
 
 ## Defined in
 
-packages/core/src/types.ts:944
+[packages/core/src/types.ts:944](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/types.ts#L944)

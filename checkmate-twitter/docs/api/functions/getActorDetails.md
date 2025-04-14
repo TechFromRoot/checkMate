@@ -20,4 +20,4 @@ Get details for a list of actors.
 
 ## Defined in
 
-packages/core/src/messages.ts:12
+[packages/core/src/messages.ts:12](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/messages.ts#L12)

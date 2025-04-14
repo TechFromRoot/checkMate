@@ -100,4 +100,4 @@ Model names by size class
 
 ## Defined in
 
-packages/core/src/types.ts:142
+[packages/core/src/types.ts:142](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/types.ts#L142)

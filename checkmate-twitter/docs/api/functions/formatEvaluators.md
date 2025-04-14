@@ -20,4 +20,4 @@ A string that concatenates the name and description of each evaluator, separated
 
 ## Defined in
 
-packages/core/src/evaluators.ts:41
+[packages/core/src/evaluators.ts:41](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/evaluators.ts#L41)

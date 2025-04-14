@@ -100,4 +100,4 @@ Main Character schema
 
 ## Defined in
 
-packages/core/src/environment.ts:66
+[packages/core/src/environment.ts:66](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/environment.ts#L66)

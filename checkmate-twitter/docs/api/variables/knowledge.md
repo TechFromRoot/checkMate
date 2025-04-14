@@ -52,4 +52,4 @@
 
 ## Defined in
 
-packages/core/src/knowledge.ts:150
+[packages/core/src/knowledge.ts:150](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/knowledge.ts#L150)

@@ -28,4 +28,4 @@ Promise resolving to an array of strings parsed from the model's response
 
 ## Defined in
 
-packages/core/src/generation.ts:639
+[packages/core/src/generation.ts:639](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/generation.ts#L639)

@@ -18,4 +18,4 @@
 
 ## Defined in
 
-packages/core/src/goals.ts:55
+[packages/core/src/goals.ts:55](https://github.com/TechFromRoot/checkMate/blob/main/checkmate-twitter/packages/core/src/goals.ts#L55)
