@@ -635,6 +635,7 @@ export class DiscordBotService {
       if (!data.tokenDetail || !data.tokenVotes) {
         // Re-enable the button and keep the current embed on API error
         const currentEmbed = interaction.message.embeds[0];
+
         const reEnabledComponents = this.buildButtonComponents(tokenAddress, {
           up: data?.tokenVotes?.up || 0,
           down: data?.tokenVotes?.down || 0,

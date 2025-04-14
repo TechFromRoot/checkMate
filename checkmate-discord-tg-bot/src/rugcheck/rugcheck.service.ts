@@ -81,6 +81,26 @@ export class RugcheckService {
     return { tokenDetail, tokenVotes };
   };
 
+  getTokenDetails = async (mint: string) => {
+    const [reportResult] = await Promise.allSettled([
+      this.httpService.axiosRef.get(
+        `https://api.rugcheck.xyz/v1/tokens/${mint}/report`,
+      ),
+    ]);
+
+    const reportData =
+      reportResult.status === 'fulfilled' && !reportResult.value.data.error
+        ? reportResult.value.data
+        : null;
+
+    if (!reportData) {
+      return;
+    }
+    const tokenDetail: TokenData = reportData;
+
+    return { tokenDetail };
+  };
+
   async signLoginPayload(base58PrivateKey: string): Promise<any> {
     // Decode private key
     const secretKey = bs58.decode(base58PrivateKey);

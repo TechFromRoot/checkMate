@@ -6,9 +6,17 @@ import { DatabaseModule } from './database/database.module';
 import { WalletModule } from './wallet/wallet.module';
 import { RugcheckModule } from './rugcheck/rugcheck.module';
 import { TelegramBotModule } from './telegram-bot/telegram-bot.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
-  imports: [DiscordBotModule, DatabaseModule, WalletModule, RugcheckModule, TelegramBotModule],
+  imports: [
+    DiscordBotModule,
+    DatabaseModule,
+    WalletModule,
+    RugcheckModule,
+    TelegramBotModule,
+    ScheduleModule.forRoot(),
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

@@ -75,7 +75,7 @@ export const tokenDisplayMarkup = async (
     );
   }
   if (token.creator) {
-    overviewFields.push(`*Creator:* \`${shortenAddress(token.creator)}\``);
+    overviewFields.push(`*Creator:* \`${token.creator}\``);
   }
   if (token.price) {
     overviewFields.push(`*Price:* $${token.price.toFixed(8)}`);
@@ -252,14 +252,12 @@ export const tokenDisplayMarkup = async (
       ],
       [
         {
-          text: 'Refresh 🔄',
-          callback_data: JSON.stringify({
-            c: `/refresh|${token.mint}`,
-          }),
-        },
-        {
           text: 'Trade 🤖',
           url: `https://t.me/fluxbeam_bot?start=ca-${token.mint}`,
+        },
+        {
+          text: 'Track Creator 🕵️',
+          url: `${process.env.BOT_URL}?start=ca-${token.mint}`,
         },
       ],
       [
@@ -270,6 +268,14 @@ export const tokenDisplayMarkup = async (
         {
           text: 'Explorer 🔎',
           url: `https://solana.fm/address/${token.mint}?cluster=mainnet-alpha`,
+        },
+      ],
+      [
+        {
+          text: 'Refresh 🔄',
+          callback_data: JSON.stringify({
+            c: `/refresh|${token.mint}`,
+          }),
         },
       ],
     ],
