@@ -176,7 +176,7 @@ export class DiscordBotService {
       );
     if (token.creator) overviewFields.push(`**Creator:** \`${token.creator}\``);
     if (token.price)
-      overviewFields.push(`**Price:** $${token.price.toFixed(8)}`);
+      overviewFields.push(`**Price:** $${this.formatPrice(token.price)}`);
     if (token.price && token.token.supply)
       overviewFields.push(
         `**Market Cap:** $${this.formatNumber(token.price * (token.token.supply / 10 ** token.token.decimals))}`,
@@ -764,6 +764,12 @@ export class DiscordBotService {
     if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
     if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
     return num.toFixed(2);
+  };
+
+  private formatPrice = (price: number): string => {
+    if (price === 0) return '0';
+    if (price < 0.00000001) return `${price.toFixed(8)}(~< 0.00000001)`;
+    return price.toFixed(8);
   };
 
   // Utility to shorten addresses

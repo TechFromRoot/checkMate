@@ -524,7 +524,7 @@ export class TwitterInteractionClient {
         // Key Metrics
         const metrics: string[] = [];
         if (token.price) {
-            metrics.push(`💰 Price: $${token.price.toFixed(8)}`);
+            metrics.push(`💰 Price: $${this.formatPrice(token.price)}`);
         }
         if (token.price && token.token.supply) {
             const marketCap =
@@ -554,14 +554,38 @@ export class TwitterInteractionClient {
             metrics.push(`🚨 Risk: ${normalizedScore}/100 ${riskEmoji}`);
         }
 
-        // Community Sentiment
-        if (tokenVote) {
-            metrics.push(`🚀 Up: ${tokenVote.up} | 💩 Down: ${tokenVote.down}`);
+        if (typeof token.rugged === "boolean") {
+            metrics.push(`🔻 Rugged: ${token.rugged ? "Yes" : "No"}`);
         }
 
-        // Add metrics to lines (limit to 3 for brevity)
+        // Insider Analysis
+        if (token.insiderNetworks?.length) {
+            const { insiderPct, totalWallet } = token.insiderNetworks.reduce(
+                (acc, insider) => {
+                    if (insider["type"] === "transfer") {
+                        // Assuming 'type' might be present; adjust if not
+                        acc.totalWallet += insider.size;
+                        acc.insiderPct +=
+                            (insider.tokenAmount / token.token.supply) * 100;
+                    }
+                    return acc;
+                },
+                { insiderPct: 0, totalWallet: 0 }
+            );
+            const insiderText = `${insiderPct.toFixed(2)}% of supply sent to ${totalWallet} wallets`;
+            metrics.push(`🕵️‍♀️ Insider Analysis: ${insiderText}`);
+        }
+
+        // Community Sentiment
+        if (tokenVote) {
+            metrics.push(
+                `👥 Community Sentiment : 🚀 Up: ${tokenVote.up} | 💩 Down: ${tokenVote.down}`
+            );
+        }
+
+        // Add metrics to lines (limit to 9 for brevity)
         if (metrics.length > 0) {
-            lines.push(...metrics.slice(0, 9));
+            lines.push(...metrics.slice(0, 12));
         }
 
         // Call-to-Action
@@ -591,5 +615,11 @@ export class TwitterInteractionClient {
         if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
         if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
         return num.toFixed(2);
+    };
+
+    formatPrice = (price: number): string => {
+        if (price === 0) return "0";
+        if (price < 0.00000001) return `${price.toFixed(8)}(~< 0.00000001)`;
+        return price.toFixed(8);
     };
 }

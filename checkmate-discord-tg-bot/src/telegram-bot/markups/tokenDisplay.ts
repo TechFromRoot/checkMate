@@ -55,6 +55,22 @@ const formatNumber = (num: number): string => {
   return num.toFixed(2);
 };
 
+// const formatPrice = (price: number): string => {
+//   if (price === 0) return '$ 0';
+
+//   if (price < 0.00000001) {
+//     return `${price.toFixed(18)} (approx. < $0.00000001)`;
+//   }
+
+//   return `${price.toFixed(8)}`;
+// };
+
+const formatPrice = (price: number): string => {
+  if (price === 0) return '0';
+  if (price < 0.00000001) return `${price.toFixed(8)}(~< 0.00000001)`;
+  return price.toFixed(8);
+};
+
 export const tokenDisplayMarkup = async (
   token: TokenData,
   tokenVote: VoteData,
@@ -78,7 +94,7 @@ export const tokenDisplayMarkup = async (
     overviewFields.push(`*Creator:* \`${token.creator}\``);
   }
   if (token.price) {
-    overviewFields.push(`*Price:* $${token.price.toFixed(8)}`);
+    overviewFields.push(`*Price:* $${formatPrice(token.price)}`);
   }
   if (token.price && token.token.supply) {
     overviewFields.push(
