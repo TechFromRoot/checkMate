@@ -455,6 +455,16 @@ export class TelegramBotService {
           }
           break;
 
+        case '/close':
+          await this.checkMateBot.sendChatAction(
+            query.message.chat.id,
+            'typing',
+          );
+          return await this.checkMateBot.deleteMessage(
+            query.message.chat.id,
+            query.message.message_id,
+          );
+
         default:
           return await this.checkMateBot.sendMessage(
             query.message.chat.id,
