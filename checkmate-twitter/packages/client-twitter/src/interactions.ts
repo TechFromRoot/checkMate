@@ -77,7 +77,7 @@ export class TwitterInteractionClient {
             this.handleTwitterInteractions();
             setTimeout(
                 handleTwitterInteractionsLoop,
-                Number(this.runtime.getSetting("TWITTER_POLL_INTERVAL") || 60) *
+                Number(this.runtime.getSetting("TWITTER_POLL_INTERVAL") || 30) *
                     1000 // Default to 2 minutes
             );
         };
@@ -545,12 +545,7 @@ export class TwitterInteractionClient {
                   ? Math.min(Math.round((token.score / 118101) * 100), 100)
                   : undefined;
         if (normalizedScore !== undefined) {
-            const riskEmoji =
-                normalizedScore >= 70
-                    ? "🔴"
-                    : normalizedScore >= 30
-                      ? "🟡"
-                      : "🟢";
+            const riskEmoji = normalizedScore >= 50 ? "🔴" : "🟢";
             metrics.push(`🚨 Risk: ${normalizedScore}/100 ${riskEmoji}`);
         }
 
