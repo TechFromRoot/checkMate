@@ -127,12 +127,9 @@ export const tokenDisplayMarkup = async (
   let riskLevel = '';
   let riskEmoji = '';
   if (normalizedScore !== undefined) {
-    if (normalizedScore >= 70) {
+    if (normalizedScore > 50) {
       riskLevel = 'Bad';
       riskEmoji = '🔴';
-    } else if (normalizedScore >= 30) {
-      riskLevel = 'Medium';
-      riskEmoji = '🟡';
     } else {
       riskLevel = 'Good';
       riskEmoji = '🟢';

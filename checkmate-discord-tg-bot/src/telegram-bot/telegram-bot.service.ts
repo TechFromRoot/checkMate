@@ -138,11 +138,12 @@ export class TelegramBotService {
         if (userExist) {
           await this.checkMateBot.sendChatAction(msg.chat.id, 'typing');
           const welcome = await welcomeMessageMarkup(username);
+          const replyMarkup = { inline_keyboard: welcome.keyboard };
 
           return await this.checkMateBot.sendMessage(
             msg.chat.id,
             welcome.message,
-            { parse_mode: 'HTML' },
+            { parse_mode: 'HTML', reply_markup: replyMarkup },
           );
         }
         const saved = await this.saveUserToDB(msg.chat.id);

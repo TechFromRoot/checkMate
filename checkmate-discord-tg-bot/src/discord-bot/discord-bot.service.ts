@@ -143,14 +143,10 @@ export class DiscordBotService {
     let riskEmoji = '';
     let embedColor: ColorResolvable = '#00FF00';
     if (normalizedScore !== undefined) {
-      if (normalizedScore >= 70) {
+      if (normalizedScore > 50) {
         riskLevel = 'Bad';
         riskEmoji = '🔴';
         embedColor = '#00FF00';
-      } else if (normalizedScore >= 30) {
-        riskLevel = 'Medium';
-        riskEmoji = '🟡';
-        embedColor = '#FFFF00';
       } else {
         riskLevel = 'Good';
         riskEmoji = '🟢';
