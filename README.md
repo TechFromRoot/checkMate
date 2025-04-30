@@ -10,6 +10,8 @@ CheckM8 is designed for degens, traders, and communities to **instantly verify t
 
 ---
 
+## [demo post](https://x.com/CheckM8_Bot/status/1917753103350112369)
+
 ## 🔗 Bot Link
 
 - **Telegram Bot:** [@CheckM8_Bot](https://t.me/CheckM8_Bot)
